@@ -29,10 +29,10 @@ class Player:
         self.current_track_index = 0
         self.playlist = []
 
-    def download_track(self, url, track_id):
+    def download_track(self, url, track_id, track_md5):
         """Download a track and save it to the cache directory."""
         try:
-            track_path = os.path.join(CACHE_DIR, f"{track_id}.mp3")
+            track_path = os.path.join(CACHE_DIR, track_md5)
             if os.path.exists(track_path):
                 logger.info(f"Track {track_id} already cached.")
                 return track_path
@@ -55,10 +55,13 @@ class Player:
     def add_track_to_queue(self, track):
         """Add a track to the player queue."""
         try:
-            track_id = track.get("md5")
+            track_md5 = track.get("md5")
+            track_id = track.get("id")
             track_url = (f"{NORMALIZED_CDN}/{track.get('id')}" if track.get("type") == "Track"
                         else track.get("url"))
-            track_path = self.download_track(track_url, track_id)
+            logger.info(f"Add track to queue, md5, {track_md5} added to queue.")
+
+            track_path = self.download_track(track_url, track_id, track_md5)
 
             if track_path:
                 media = self.instance.media_new(track_path)
@@ -141,22 +144,9 @@ class Player:
         else:
             logger.info("No more tracks to skip.")
 
-# Helper functions
-# def process_track(track):
-#     """Process a track (download and cache)."""
-#     player = Player()
-#     player.add_track_to_queue(track)
-
 def start_player(playlist):
     """Start playing the playlist."""
     player = Player()
     for track in playlist[:10]:  # Load first 10 tracks
         player.add_track_to_queue(track)
     player.play()
-
-# def play_track_at_offset(track, offset):
-#     """Play a track from a specific offset."""
-#     player = Player()
-#     player.add_track_to_queue(track)
-#     player.seek(offset)
-#     player.play()
