@@ -2,7 +2,9 @@
 import requests
 import yaml
 from app.auth import get_auth_token, save_token, load_token
-from app.logger import setup_logger
+import logging
+
+logger = logging.getLogger("naistro-player")
 
 # Load configuration
 with open("config/config.yaml", "r") as file:
@@ -11,8 +13,6 @@ with open("config/config.yaml", "r") as file:
 LOCATIONS_URL = config["api"]["locations_url"]
 CONTENT_TYPE = config["headers"]["content_type"]
 PUBLIC_API_KEY = config["headers"]["public_api_key"]
-
-logger = setup_logger()
 
 def get_headers():
     """Get headers with authentication token"""

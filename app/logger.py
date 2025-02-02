@@ -2,7 +2,7 @@
 import logging
 
 def setup_logger():
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger("naistro-player")
     logger.setLevel(logging.INFO)
     handler = logging.StreamHandler()
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')

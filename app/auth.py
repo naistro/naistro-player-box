@@ -3,10 +3,9 @@ import boto3
 import yaml
 import os
 from botocore.exceptions import BotoCoreError, ClientError
-from app.logger import setup_logger
+import logging
 
-# Load configuration
-logger = setup_logger()
+logger = logging.getLogger("naistro-player")
 logger.info("Loading configuration from auth.yaml...")
 
 try:

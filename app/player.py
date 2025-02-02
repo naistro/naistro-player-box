@@ -5,16 +5,14 @@ import vlc
 import time
 import yaml
 import logging
-from app.logger import setup_logger
+
+logger = logging.getLogger("naistro-player")
 
 with open("config/config.yaml", "r") as file:
     config = yaml.safe_load(file)
 
 NORMALIZED_CDN = config["api"]["normalized_cdn"]
 PUBLISHED_CDN = config["api"]["published_cdn"]
-
-# Initialize logger
-logger = setup_logger()
 
 # Directory to store cached tracks
 CACHE_DIR = "cache/tracks"
