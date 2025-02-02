@@ -26,12 +26,12 @@ def get_headers():
             logger.error("Failed to retrieve authentication token")
             return None
 
-    logger.debug(f"Using token: {token}")  # Log the token for debugging
+    logger.info(f"Using token: {token}")  # Log the token for debugging
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
     }
-    logger.debug(f"Headers: {headers}")
+    logger.info(f"Headers: {headers}")
     return headers
 
 def fetch_locations():
