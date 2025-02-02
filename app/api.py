@@ -15,7 +15,6 @@ logger = setup_logger()
 
 def get_headers():
     """Get headers with authentication token"""
-    logger.info("Fetching headers...")
     token = load_token()
     if not token:
         logger.info("No token found. Fetching new authentication token...")
@@ -28,13 +27,11 @@ def get_headers():
             logger.error("Failed to retrieve authentication token")
             return None
 
-    logger.info(f"Using token: {token}")  # Log the token for debugging
     headers = {
         "Authorization": f"Bearer {token}",
         "x-api-key": PUBLIC_API_KEY,
         "Content-Type": CONTENT_TYPE
     }
-    logger.info(f"Headers: {headers}")
     return headers
 
 def fetch_locations():
@@ -74,7 +71,7 @@ def fetch_playlist(location_id):
         return None
 
     # Construct the URL with the location_id dynamically
-    playlist_url = f"{LOCATIONS_URL}{location_id}/new-playlist"
+    playlist_url = f"{LOCATIONS_URL}/{location_id}/new-playlist"
     
     # Add query parameters
     params = {

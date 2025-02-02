@@ -25,8 +25,6 @@ AUTH_URL = config["aws_cognito"]["auth_url"]
 USERNAME = config["credentials"]["username"]
 PASSWORD = config["credentials"]["password"]
 
-logger.debug(f"Configuration: USER_POOL_ID={USER_POOL_ID}, CLIENT_ID={CLIENT_ID}, REGION={REGION}, USERNAME={USERNAME}")
-
 def get_auth_token():
     """Authenticate with AWS Cognito and return the token"""
     logger.info("Attempting to authenticate with AWS Cognito...")
@@ -53,9 +51,6 @@ def get_auth_token():
         refresh_token = response["AuthenticationResult"]["RefreshToken"]
 
         logger.info("Authentication successful")
-        logger.debug(f"ID Token: {id_token}")
-        logger.debug(f"Access Token: {access_token}")
-        logger.debug(f"Refresh Token: {refresh_token}")
 
         return id_token, access_token, refresh_token
 
@@ -89,7 +84,6 @@ def load_token():
                 token = f.read().strip()
                 if token:
                     logger.info("Token loaded successfully.")
-                    logger.debug(f"Token: {token}")
                     return token
                 else:
                     logger.warning("Token file is empty.")
