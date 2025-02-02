@@ -13,11 +13,13 @@ logger = setup_logger()
 
 def get_headers():
     """Get headers with authentication token"""
+    logger.info("Fetching headers...")
     token = load_token()
     if not token:
-        logger.info("Fetching new authentication token...")
+        logger.info("No token found. Fetching new authentication token...")
         id_token, _, _ = get_auth_token()
         if id_token:
+            logger.info("New token fetched. Saving token...")
             save_token(id_token)
             token = id_token
         else:
@@ -25,10 +27,12 @@ def get_headers():
             return None
 
     logger.debug(f"Using token: {token}")  # Log the token for debugging
-    return {
+    headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
     }
+    logger.debug(f"Headers: {headers}")
+    return headers
 
 def fetch_locations():
     """Fetch list of locations from API"""
