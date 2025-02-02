@@ -8,6 +8,8 @@ with open("config/config.yaml", "r") as file:
     config = yaml.safe_load(file)
 
 LOCATIONS_URL = config["api"]["locations_url"]
+CONTENT_TYPE = config["api"]["headers"]["content_type"]
+PUBLIC_API_KEY = config["api"]["headers"]["public_api_key"]
 
 logger = setup_logger()
 
@@ -29,7 +31,8 @@ def get_headers():
     logger.info(f"Using token: {token}")  # Log the token for debugging
     headers = {
         "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
+        "x-api-key": PUBLIC_API_KEY,
+        "Content-Type": CONTENT_TYPE
     }
     logger.info(f"Headers: {headers}")
     return headers
