@@ -2,13 +2,13 @@ import time
 from app.auth import get_auth_token, save_token, load_token
 from app.api import fetch_locations, fetch_playlist
 from app.logger import setup_logger
+from app.player import start_player
 
 # Initialize logger
 logger = setup_logger()
 
 def main():
     """Main workflow to authenticate, fetch locations, and get playlist"""
-
     logger.info("Starting application...")
 
     # Step 1: Authenticate and store the token
@@ -39,18 +39,16 @@ def main():
     # Step 3: Fetch playlist for the selected location
     logger.info(f"Fetching playlist for location {location_id}...")
     playlist = fetch_playlist(location_id)
-    
+
     if not playlist:
         logger.error("No tracks found in the playlist. Exiting...")
         return
 
     logger.info(f"Playlist loaded: {len(playlist)} tracks found.")
 
-    # Print the first few tracks
-    for track in playlist[:5]:  # Show first 5 tracks for debugging
-        logger.info(f"Track: {track['title']} - {track['url']}")
-
-    logger.info("Next step: Caching and playing tracks...")
+    # Step 4: Start playing the playlist
+    logger.info("Starting player...")
+    start_player(playlist)
 
 if __name__ == "__main__":
     main()

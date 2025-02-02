@@ -1,3 +1,4 @@
+# config/auth.yaml
 aws_cognito:
   user_pool_id: "eu-west-1_O9xcPaG24"
   client_id: "4ffgfe9g364gep939ip6bj72u5"

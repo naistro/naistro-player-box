@@ -1,5 +1,8 @@
+# config/config.yaml
 api:
   locations_url: "https://api-dev.naistro.com/players/locations"
+  normalized_cdn: "https://cdn-gate-dev.naistro.com/audio/normalized"
+  published_cdn: "https://cdn-gate-dev.naistro.com/audio/published"
 headers:
   public_api_key: "o4PBtizoSs1meRjfgXohv9H0nMowRuTA4CNraECW"
   content_type: "application/json"

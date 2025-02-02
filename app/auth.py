@@ -1,3 +1,4 @@
+# app/auth.py
 import boto3
 import yaml
 import os
