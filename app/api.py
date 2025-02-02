@@ -13,7 +13,6 @@ logger = setup_logger()
 
 def get_headers():
     """Get headers with authentication token"""
-    logger.info("Retrieving authentication token...")
     token = load_token()
     if not token:
         logger.info("Fetching new authentication token...")
@@ -25,6 +24,7 @@ def get_headers():
             logger.error("Failed to retrieve authentication token")
             return None
 
+    logger.debug(f"Using token: {token}")  # Log the token for debugging
     return {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
@@ -51,6 +51,11 @@ def fetch_locations():
             logger.error("Invalid locations API response format")
             return None
 
+    except requests.exceptions.HTTPError as e:
+        # Log the response body for more details
+        logger.error(f"HTTP Error: {e}")
+        logger.error(f"Response Body: {e.response.text}")
+        return None
     except requests.exceptions.RequestException as e:
         logger.error(f"Failed to fetch locations: {e}")
         return None
