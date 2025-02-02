@@ -1,5 +1,4 @@
 api:
-  locations_url: "https://api-dev.naistro.com/players/locations?isPlaylists=true"
-  playlists_url_prefix: "https://api-dev.naistro.com/players/locations/"
+  locations_url: "https://api-dev.naistro.com/players/locations/"
 headers:
   content_type: "application/json"

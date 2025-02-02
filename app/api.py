@@ -8,12 +8,12 @@ with open("config/config.yaml", "r") as file:
     config = yaml.safe_load(file)
 
 LOCATIONS_URL = config["api"]["locations_url"]
-PLAYLISTS_URL_PREFIX = config["api"]["playlists_url_prefix"]
 
 logger = setup_logger()
 
 def get_headers():
     """Get headers with authentication token"""
+    logger.info("Retrieving authentication token...")
     token = load_token()
     if not token:
         logger.info("Fetching new authentication token...")
@@ -36,9 +36,12 @@ def fetch_locations():
     if not headers:
         return None
     
+    params = {
+        "isPlaylists": "true",
+    }
 
     try:
-        response = requests.get(LOCATIONS_URL, headers=headers)
+        response = requests.get(LOCATIONS_URL, headers=headers, params=params)
         response.raise_for_status()
         data = response.json()
 
@@ -59,7 +62,7 @@ def fetch_playlist(location_id):
         return None
 
     # Construct the URL with the location_id dynamically
-    playlist_url = f"{PLAYLISTS_URL_PREFIX}{location_id}/new-playlist"
+    playlist_url = f"{LOCATIONS_URL}{location_id}/new-playlist"
     
     # Add query parameters
     params = {
