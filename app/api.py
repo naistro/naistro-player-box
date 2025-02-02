@@ -8,7 +8,7 @@ with open("config/config.yaml", "r") as file:
     config = yaml.safe_load(file)
 
 LOCATIONS_URL = config["api"]["locations_url"]
-PLAYLISTS_URL = config["api"]["playlists_url"]
+PLAYLISTS_URL_PREFIX = config["api"]["playlists_url_prefix"]
 
 logger = setup_logger()
 
@@ -35,11 +35,19 @@ def fetch_locations():
     headers = get_headers()
     if not headers:
         return None
+    
 
     try:
         response = requests.get(LOCATIONS_URL, headers=headers)
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+
+        if "payload" in data:
+            return data["payload"]
+        else:
+            logger.error("Invalid locations API response format")
+            return None
+
     except requests.exceptions.RequestException as e:
         logger.error(f"Failed to fetch locations: {e}")
         return None
@@ -50,10 +58,34 @@ def fetch_playlist(location_id):
     if not headers:
         return None
 
+    # Construct the URL with the location_id dynamically
+    playlist_url = f"{PLAYLISTS_URL_PREFIX}{location_id}/new-playlist"
+    
+    # Add query parameters
+    params = {
+        "encrypted": "true",
+        "timezoneSecondsOffset": -3600,
+        "minSecondsCachedExpected": 90000,
+        "isPlaylists": "true",
+        "test": "false",
+        "prayerDurationInMilliseconds": 60,
+        "silenceDurationInMilliseconds": 30000
+    }
+
     try:
-        response = requests.get(f"{PLAYLISTS_URL}/{location_id}", headers=headers)
+        response = requests.get(playlist_url, headers=headers, params=params)
         response.raise_for_status()
-        return response.json().get("tracks", [])
+
+        data = response.json()
+
+        payload = data["payload"]
+        if "events" in payload:
+            return payload["events"]
+        else:
+            logger.error("Invalid playlist API response format")
+            return None
+
     except requests.exceptions.RequestException as e:
         logger.error(f"Failed to fetch playlist: {e}")
         return None
+

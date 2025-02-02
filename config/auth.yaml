@@ -4,8 +4,7 @@ aws_cognito:
   region: "eu-west-1"
   auth_url: "https://cognito-idp.eu-west-1.amazonaws.com/"
 credentials:
-  username: "your-username"
-  password: "your-password"
+  username: "naistro"
+  password: "test123ABC!"
 headers:
   content_type: "application/x-amz-json-1.1"
-  
