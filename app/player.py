@@ -24,8 +24,26 @@ class Player:
     def __init__(self):
         self.instance = vlc.Instance()
         self.player = self.instance.media_player_new()
+        self.event_manager = self.player.event_manager()
+
+        # Attach an event listener for when playback starts
+        self.event_manager.event_attach(
+            vlc.EventType.MediaPlayerPlaying, 
+            self.on_media_player_playing
+        )
+
         self.current_track_index = 0
+        self.playlist_length = 0
         self.playlist = []
+
+
+    def on_media_player_playing(self, event):
+        """Event handler for when playback starts."""
+        self.current_track_index += 1
+        logger.info("Playback started. The event is: %s" % event)
+
+        track = self.playlist[self.current_track_index]
+        self.play_track_at_offset(track)
 
     def download_track(self, url, track_id, track_md5):
         """Download a track and save it to the cache directory."""
@@ -65,6 +83,7 @@ class Player:
                 media = self.instance.media_new(track_path)
                 self.player.set_media(media)
                 self.playlist.append({"media": media, "track": track})  # Store track metadata
+                self.playlist_length += 1
                 logger.info(f"Track {track_id} added to queue.")
             else:
                 logger.error(f"Failed to add track {track_id} to queue.")
@@ -72,16 +91,19 @@ class Player:
         except Exception as e:
             logger.error(f"Error adding track to queue: {e}")
 
-    def play_track_at_offset(self, track, offset):
+    def play_track_at_offset(self, track):
         """Play a track from a specific offset."""
         try:
-            # Set the media for the player
-            self.player.set_media(track["media"])
-            # Seek to the specified offset
-            self.seek(offset)
-            # Start playback
-            self.player.play()
-            logger.info(f"Playing track from offset: {offset} seconds.")
+            if (track.get("adjustedDuration") != track.get("metadata", {}).get("runtime") and
+            (track.get("splitType") == "leftover" or track.get("metadata", {}).get("start"))):
+                offset = track.get("metadata", {}).get("start") or (
+                    track.get("metadata", {}).get("runtime") - track.get("adjustedDuration")
+                )
+                if offset > 10:
+                    self.player.set_time(offset * 1000)
+                else:
+                    self.player.set_time((track.get("metadata", {}).get("runtime") - 10) * 1000)
+                logger.info(f"Playing track from offset: {offset} seconds.")
         except Exception as e:
             logger.error(f"Error playing track at offset: {e}")
 
@@ -93,34 +115,6 @@ class Player:
 
         logger.info("Starting playback...")
         self.player.play()
-
-        # Monitor playback and load next tracks
-        while True:
-            time.sleep(1)
-            if not self.player.is_playing():
-                self.current_track_index += 1
-                if self.current_track_index >= len(self.playlist):
-                    logger.info("End of playlist.")
-                    break
-
-                # Get the next track and its metadata
-                next_track = self.playlist[self.current_track_index]
-                track_metadata = next_track["track"]
-
-                # Check if the track should start from an offset
-                if (track_metadata.get("adjustedDuration") != track_metadata.get("metadata", {}).get("runtime") and
-                    (track_metadata.get("splitType") == "leftover" or track_metadata.get("metadata", {}).get("start"))):
-                    offset = track_metadata.get("metadata", {}).get("start") or (
-                        track_metadata.get("metadata", {}).get("runtime") - track_metadata.get("adjustedDuration")
-                    )
-                    if offset > 10:
-                        self.play_track_at_offset(next_track, offset)
-                    else:
-                        self.play_track_at_offset(next_track, track_metadata.get("metadata", {}).get("runtime") - 10)
-                else:
-                    # Play the track normally
-                    self.player.set_media(next_track["media"])
-                    self.player.play()
 
     def stop(self):
         """Stop playback."""
