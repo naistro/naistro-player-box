@@ -51,7 +51,7 @@ def fetch_locations():
         data = response.json()
 
         if "payload" in data:
-            return data["payload"].get("locations", [])
+            return data["payload"]
         else:
             logger.error("Invalid locations API response format")
             return None
