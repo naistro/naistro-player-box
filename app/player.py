@@ -152,7 +152,7 @@ class Player:
                 offset = int(metadata.get("start") or (runtime - adjusted_duration))
                 logger.info(f"Calculated offset: {offset} seconds")
                 # Wait a bit to ensure the file is fully loaded.
-                time.sleep(0.5)
+                # time.sleep(0.5)
 
                 # If offset is greater than 10, use it; otherwise, use runtime-10.
                 if offset > 10:
