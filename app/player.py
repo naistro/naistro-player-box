@@ -137,7 +137,7 @@ class Player:
         except Exception as e:
             logger.error(f"Failed to download track {track_id}: {e}")
             return None
-
+        
     def play_track_at_offset(self, track):
         logger.info(f"Playing track with offset adjustment if needed: {track}")
         try:
@@ -145,28 +145,31 @@ class Player:
             metadata = track.get("metadata", {})
             runtime = int(metadata.get("runtime"))
 
-            # If the track has an offset (by split or explicit start time), adjust playback.
+            # Check if we need to adjust the playback offset.
             if adjusted_duration != runtime and (track.get("splitType") == "leftover" or metadata.get("start")):
+                # Compute the offset based on metadata. If "start" is available, use it;
+                # otherwise, compute it from the runtime and adjusted duration.
                 offset = int(metadata.get("start") or (runtime - adjusted_duration))
                 logger.info(f"Calculated offset: {offset} seconds")
-                # Increase wait time to allow the file to load
-                time.sleep(1)  # Try increasing this delay if necessary
+                # Wait a bit to ensure the file is fully loaded.
+                time.sleep(1)
+
+                # If offset is greater than 10, use it; otherwise, use runtime-10.
                 if offset > 10:
                     logger.info(f"Setting playback offset to {offset} seconds.")
-                    self.player.time = offset
+                    self.player.seek(offset, reference='absolute')
                 else:
                     alt_offset = runtime - 10
-                    logger.info(f"Setting playback offset to {alt_offset} seconds.")
-                    self.player.time = alt_offset
+                    logger.info(f"Offset ({offset} sec) too low; setting playback offset to {alt_offset} seconds instead.")
+                    self.player.seek(alt_offset, reference='absolute')
 
-                # Log the current playback time shortly after setting the offset
+                # Optionally, log the current playback time after a short delay.
                 time.sleep(0.1)
-                logger.info(f"Current playback time: {self.player.time}")
+                logger.info(f"Current playback time after seek: {self.player.time}")
             else:
                 logger.info("No offset adjustment needed for this track.")
         except Exception as e:
             logger.error(f"Error in play_track_at_offset: {e}")
-
 
     def play(self):
         """
