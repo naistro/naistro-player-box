@@ -158,7 +158,7 @@ class Player:
                 if offset > 10:
                     logger.info(f"Setting playback offset to {offset} seconds.")
                     logger.info(f"Adjusted duration: {runtime - offset}, Runtime: {runtime}")
-                    self.player.time = runtime - offset
+                    self.player.time = 300
                 else:
                     logger.info(f"Setting playback offset in else case to {runtime - 10} seconds.")
                     logger.info(f"Adjusted duration in else case: {10}, Runtime: {runtime}")
