@@ -94,7 +94,7 @@ class Player:
             logger.error(f"Error adding track to queue: {e}")
 
     def preload_next_tracks(self, count):
-        """Download and add the next `count` tracks to the playlist."""
+        logger.info(f"Preloading next {count} tracks...")
         try:
             # Start from the last track in the player queue
             start_index = self.media_list_length
