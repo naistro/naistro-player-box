@@ -23,26 +23,77 @@ os.makedirs(CACHE_DIR, exist_ok=True)
 class Player:
     def __init__(self):
         self.instance = vlc.Instance()
-        self.player = self.instance.media_player_new()
-        self.event_manager = self.player.event_manager()
+        self.media_list = self.instance.media_list_new()  # Create a MediaList
+        self.media_list_player = self.instance.media_list_player_new()  # Create a MediaListPlayer
+        self.media_list_player.set_media_list(self.media_list)  # Set the MediaList
 
-        # Attach an event listener for when playback starts
+        # Attach event listeners
+        self.event_manager = self.media_list_player.get_media_player().event_manager()
         self.event_manager.event_attach(
-            vlc.EventType.MediaPlayerPlaying, 
+            vlc.EventType.MediaPlayerPlaying,
             self.on_media_player_playing
+        )
+        self.event_manager.event_attach(
+            vlc.EventType.MediaPlayerEndReached,
+            self.on_media_player_end_reached
         )
 
         self.current_track_index = 0
         self.playlist_length = 0
-        self.playlist = []
+        self.playlist = []  # Store track metadata
 
     def on_media_player_playing(self, event):
+        """Callback when playback starts."""
         try:
             logger.info("Playback started. The event is: %s" % event)
             track = self.playlist[self.current_track_index]
             self.play_track_at_offset(track)
+
+            # Preload the next 5 tracks
+            self.preload_next_tracks(5)
         except Exception as e:
             logger.error(f"Error in on_media_player_playing media: {e}")
+
+    def preload_next_tracks(self, count):
+        """Download and add the next `count` tracks to the playlist."""
+        try:
+            next_index = self.current_track_index + 1
+            end_index = min(next_index + count, len(self.playlist))
+
+            for i in range(next_index, end_index):
+                if i >= len(self.playlist):
+                    break  # No more tracks to preload
+
+                track = self.playlist[i]
+                track_md5 = track.get("md5")
+                track_id = track.get("id")
+                track_url = (f"{NORMALIZED_CDN}/{track.get('id')}" if track.get("type") == "Track"
+                            else track.get("url"))
+
+                # Download the track if not already cached
+                track_path = self.download_track(track_url, track_id, track_md5)
+
+                if track_path:
+                    media = self.instance.media_new(track_path)
+                    self.media_list.add_media(media)  # Add media to the MediaList
+                    logger.info(f"Preloaded track {track_id} into the playlist.")
+                else:
+                    logger.error(f"Failed to preload track {track_id}.")
+
+        except Exception as e:
+            logger.error(f"Error preloading next tracks: {e}")
+
+    def on_media_player_end_reached(self, event):
+        """Callback when playback ends."""
+        try:
+            logger.info("Playback ended. The event is: %s" % event)
+            self.current_track_index += 1
+            if self.current_track_index < self.playlist_length:
+                self.media_list_player.play_item_at_index(self.current_track_index)
+            else:
+                logger.info("Playlist finished.")
+        except Exception as e:
+            logger.error(f"Error in on_media_player_end_reached: {e}")
 
     def download_track(self, url, track_id, track_md5):
         """Download a track and save it to the cache directory."""
@@ -80,7 +131,7 @@ class Player:
 
             if track_path:
                 media = self.instance.media_new(track_path)
-                self.player.set_media(media)
+                self.media_list.add_media(media)  # Add media to the MediaList
                 self.playlist.append({"media": media, "track": track})  # Store track metadata
                 self.playlist_length += 1
                 logger.info(f"Track {track_id} added to queue.")
@@ -99,41 +150,40 @@ class Player:
                     track.get("metadata", {}).get("runtime") - track.get("adjustedDuration")
                 )
                 if offset > 10:
-                    self.player.set_time(offset * 1000)
+                    self.media_list_player.get_media_player().set_time(offset * 1000)
                 else:
-                    self.player.set_time((track.get("metadata", {}).get("runtime") - 10) * 1000)
+                    self.media_list_player.get_media_player().set_time((track.get("metadata", {}).get("runtime") - 10) * 1000)
                 logger.info(f"Playing track from offset: {offset} seconds.")
         except Exception as e:
             logger.error(f"Error playing track at offset: {e}")
 
     def play(self):
+        """Start playing the playlist."""
         try:
-            """Start playing the playlist."""
             if not self.playlist:
                 logger.error("No tracks in the playlist.")
                 return
 
             logger.info("Starting playback...")
-            self.player.play()
+            self.media_list_player.play()  # Start playing the MediaList
         except Exception as e:
             logger.error(f"Error starting playback: {e}")
 
     def stop(self):
         """Stop playback."""
-        self.player.stop()
+        self.media_list_player.stop()
         logger.info("Playback stopped.")
 
     def seek(self, offset):
         """Seek to a specific position in the current track."""
-        self.player.set_time(int(offset * 1000))  # Convert seconds to milliseconds
+        self.media_list_player.get_media_player().set_time(int(offset * 1000))  # Convert seconds to milliseconds
         logger.info(f"Seeked to {offset} seconds.")
 
     def skip_to_next(self):
         """Skip to the next track in the playlist."""
         self.current_track_index += 1
-        if self.current_track_index < len(self.playlist):
-            self.player.set_media(self.playlist[self.current_track_index]["media"])
-            self.player.play()
+        if self.current_track_index < self.playlist_length:
+            self.media_list_player.play_item_at_index(self.current_track_index)
             logger.info("Skipped to next track.")
         else:
             logger.info("No more tracks to skip.")
@@ -143,6 +193,12 @@ def start_player(playlist):
     player = Player()
     for track in playlist[:10]:  # Load first 10 tracks
         player.add_track_to_queue(track)
-    player.play()
-    while True:
-        time.sleep(1)
+    player.play()    
+    
+    try:
+        while player.current_track_index < player.playlist_length:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        logger.info("Playback stopped by user.")
+    finally:
+        player.stop()
