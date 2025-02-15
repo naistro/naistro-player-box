@@ -107,13 +107,16 @@ class Player:
             logger.error(f"Error playing track at offset: {e}")
 
     def play(self):
-        """Start playing the playlist."""
-        if not self.playlist:
-            logger.error("No tracks in the playlist.")
-            return
+        try:
+            """Start playing the playlist."""
+            if not self.playlist:
+                logger.error("No tracks in the playlist.")
+                return
 
-        logger.info("Starting playback...")
-        self.player.play()
+            logger.info("Starting playback...")
+            self.player.play()
+        except Exception as e:
+            logger.error(f"Error starting playback: {e}")
 
     def stop(self):
         """Stop playback."""
