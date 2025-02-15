@@ -40,10 +40,26 @@ class Player:
             vlc.EventType.MediaPlayerEndReached,
             self.on_media_player_end_reached
         )
+        self.event_manager.event_attach(
+            vlc.EventType.MediaPlayerTimeChanged,
+            self.on_media_player_time_changed
+        )
 
         self.current_track_index = 0
         self.playlist_length = 0
         self.playlist = []  # Store track metadata
+        self.seek_offset = None  # Track the offset to seek to
+
+    def on_media_player_time_changed(self, event):
+        """Callback when the media time changes."""
+        try:
+            if self.seek_offset is not None:
+                # Seek to the specified offset
+                self.media_list_player.get_media_player().set_time(self.seek_offset)
+                logger.info(f"Seeked to {self.seek_offset} seconds.")
+                self.seek_offset = None  # Reset the offset
+        except Exception as e:
+            logger.error(f"Error in on_media_player_time_changed: {e}")
 
     def on_media_player_playing(self, event):
         """Callback when playback starts."""
@@ -146,11 +162,10 @@ class Player:
                 )
                 time.sleep(0.5)
                 if offset > 10:
-                    logger.info(f"Playing track from offset: {offset} seconds.")
-                    self.media_list_player.get_media_player().set_time(offset * 1000)
+                    self.seek_offset = int(offset * 1000)
                 else:
-                    logger.info(f"Playing track from offset: {offset} seconds.")
-                    self.media_list_player.get_media_player().set_time((track.get("metadata", {}).get("runtime") - 10) * 1000)
+                    self.seek_offset = (int(track.get("metadata", {}).get("runtime")) - 10) * 1000
+                    logger.info(f"Playing track from offset else: {self.seek_offset} seconds.")
             else:
                 logger.info(f"Playing track without offset, track object: {track}")
         except Exception as e:
