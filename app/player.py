@@ -107,21 +107,7 @@ class Player:
                     break  # No more tracks to preload
 
                 track = self.playlist[i]
-                track_md5 = track.get("md5")
-                track_id = track.get("id")
-                track_url = (f"{NORMALIZED_CDN}/{track.get('id')}" if track.get("type") == "Track"
-                            else track.get("url"))
-
-                # Download the track if not already cached
-                track_path = self.download_track(track_url, track_id, track_md5)
-
-                if track_path:
-                    media = self.instance.media_new(track_path)
-                    self.media_list.add_media(media)  # Add media to the MediaList
-                    self.media_list_length += 1  # Update the MediaList length
-                    logger.info(f"Preloaded track {track_id} into the playlist.")
-                else:
-                    logger.error(f"Failed to preload track {track_id}.")
+                self.add_track_to_queue(track)
 
         except Exception as e:
             logger.error(f"Error preloading next tracks: {e}")            
