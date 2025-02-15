@@ -48,8 +48,8 @@ class Player:
     def on_media_player_playing(self, event):
         """Callback when playback starts."""
         try:
-            track = self.playlist[self.current_track_index]
-            self.play_track_at_offset(track)
+            full_track_object = self.playlist[self.current_track_index]
+            self.play_track_at_offset(full_track_object.get("track"))
 
             # Preload the next 5 tracks
             self.preload_next_tracks(5)
@@ -136,7 +136,7 @@ class Player:
             return None
 
     def play_track_at_offset(self, track):
-        """Play a track from a specific offset."""
+        logger.info(f"Playing track at offset: {track}")
         try:
             if (track.get("adjustedDuration") != track.get("metadata", {}).get("runtime") and
             (track.get("splitType") == "leftover" or track.get("metadata", {}).get("start"))):
