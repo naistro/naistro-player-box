@@ -144,3 +144,5 @@ def start_player(playlist):
     for track in playlist[:10]:  # Load first 10 tracks
         player.add_track_to_queue(track)
     player.play()
+    while True:
+        time.sleep(1)
