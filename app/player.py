@@ -123,9 +123,78 @@ class Player:
                     logger.error(f"Failed to preload track {track_id}.")
 
         except Exception as e:
-            logger.error(f"Error preloading next tracks: {e}")
+            logger.error(f"Error preloading next tracks: {e}")            
 
-    # Other methods (download_track, play_track_at_offset, play, stop, seek, skip_to_next) remain unchanged
+    def download_track(self, url, track_id, track_md5):
+        """Download a track and save it to the cache directory."""
+        try:
+            track_path = os.path.join(CACHE_DIR, track_md5)
+            if os.path.exists(track_path):
+                logger.info(f"Track {track_id} already cached.")
+                return track_path
+
+            logger.info(f"Downloading track {track_id} from {url}...")
+            response = requests.get(url, stream=True)
+            response.raise_for_status()
+
+            with open(track_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+            logger.info(f"Track {track_id} downloaded and cached.")
+            return track_path
+
+        except Exception as e:
+            logger.error(f"Failed to download track {track_id}: {e}")
+            return None
+
+    def play_track_at_offset(self, track):
+        """Play a track from a specific offset."""
+        try:
+            if (track.get("adjustedDuration") != track.get("metadata", {}).get("runtime") and
+            (track.get("splitType") == "leftover" or track.get("metadata", {}).get("start"))):
+                offset = track.get("metadata", {}).get("start") or (
+                    track.get("metadata", {}).get("runtime") - track.get("adjustedDuration")
+                )
+                if offset > 10:
+                    self.media_list_player.get_media_player().set_time(offset * 1000)
+                else:
+                    self.media_list_player.get_media_player().set_time((track.get("metadata", {}).get("runtime") - 10) * 1000)
+                logger.info(f"Playing track from offset: {offset} seconds.")
+        except Exception as e:
+            logger.error(f"Error playing track at offset: {e}")
+
+    def play(self):
+        """Start playing the playlist."""
+        try:
+            if not self.playlist:
+                logger.error("No tracks in the playlist.")
+                return
+
+            logger.info("Starting playback...")
+            self.media_list_player.play()  # Start playing the MediaList
+        except Exception as e:
+            logger.error(f"Error starting playback: {e}")
+
+    def stop(self):
+        """Stop playback."""
+        self.media_list_player.stop()
+        logger.info("Playback stopped.")
+
+    def seek(self, offset):
+        """Seek to a specific position in the current track."""
+        self.media_list_player.get_media_player().set_time(int(offset * 1000))  # Convert seconds to milliseconds
+        logger.info(f"Seeked to {offset} seconds.")
+
+    def skip_to_next(self):
+        """Skip to the next track in the playlist."""
+        self.current_track_index += 1
+        if self.current_track_index < self.playlist_length:
+            self.media_list_player.play_item_at_index(self.current_track_index)
+            logger.info("Skipped to next track.")
+        else:
+            logger.info("No more tracks to skip.")
+
 def start_player(playlist):
     """Start playing the playlist."""
     player = Player()
