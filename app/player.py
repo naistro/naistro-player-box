@@ -144,13 +144,13 @@ class Player:
                 offset = track.get("metadata", {}).get("start") or (
                     track.get("metadata", {}).get("runtime") - track.get("adjustedDuration")
                 )
+                time.sleep(0.5)
                 if offset > 10:
                     logger.info(f"Playing track from offset: {offset} seconds.")
                     self.media_list_player.get_media_player().set_time(offset * 1000)
                 else:
                     logger.info(f"Playing track from offset: {offset} seconds.")
                     self.media_list_player.get_media_player().set_time((track.get("metadata", {}).get("runtime") - 10) * 1000)
-                logger.info(f"Playing track from offset: {offset} seconds.")
             else:
                 logger.info(f"Playing track without offset, track object: {track}")
         except Exception as e:
