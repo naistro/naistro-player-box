@@ -98,7 +98,7 @@ class Player:
         try:
             # Start from the last track in the player queue
             start_index = self.media_list_length
-            end_index = min(start_index + count, len(self.playlist))
+            end_index = start_index + count
 
             logger.info(f"Preloading tracks from {start_index} to {end_index}...")
 
