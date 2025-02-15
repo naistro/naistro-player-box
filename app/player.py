@@ -63,7 +63,7 @@ class Player:
             self.current_track_index += 1
             if self.current_track_index < self.playlist_length:
                 logger.info(f"Advancing to next track: {self.current_track_index}")
-                self.media_list_player.play_item_at_index(self.current_track_index)
+                logger.info(f"Should autonomously play track: {self.playlist[self.current_track_index]}")
             else:
                 logger.info("Playlist finished.")
         except Exception as e:
@@ -140,14 +140,19 @@ class Player:
         try:
             if (track.get("adjustedDuration") != track.get("metadata", {}).get("runtime") and
             (track.get("splitType") == "leftover" or track.get("metadata", {}).get("start"))):
+                logger.info(f"Playing track from offset: {track.get('metadata', {}).get('start')} seconds.")
                 offset = track.get("metadata", {}).get("start") or (
                     track.get("metadata", {}).get("runtime") - track.get("adjustedDuration")
                 )
                 if offset > 10:
+                    logger.info(f"Playing track from offset: {offset} seconds.")
                     self.media_list_player.get_media_player().set_time(offset * 1000)
                 else:
+                    logger.info(f"Playing track from offset: {offset} seconds.")
                     self.media_list_player.get_media_player().set_time((track.get("metadata", {}).get("runtime") - 10) * 1000)
                 logger.info(f"Playing track from offset: {offset} seconds.")
+            else:
+                logger.info(f"Playing track without offset: {track.get('metadata', {}).get('runtime')}.")
         except Exception as e:
             logger.error(f"Error playing track at offset: {e}")
 
