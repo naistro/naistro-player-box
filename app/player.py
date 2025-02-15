@@ -36,14 +36,13 @@ class Player:
         self.playlist_length = 0
         self.playlist = []
 
-
     def on_media_player_playing(self, event):
-        """Event handler for when playback starts."""
-        self.current_track_index += 1
-        logger.info("Playback started. The event is: %s" % event)
-
-        track = self.playlist[self.current_track_index]
-        self.play_track_at_offset(track)
+        try:
+            logger.info("Playback started. The event is: %s" % event)
+            track = self.playlist[self.current_track_index]
+            self.play_track_at_offset(track)
+        except Exception as e:
+            logger.error(f"Error in on_media_player_playing media: {e}")
 
     def download_track(self, url, track_id, track_md5):
         """Download a track and save it to the cache directory."""
