@@ -146,19 +146,22 @@ class Player:
         """
         logger.info(f"Playing track with offset adjustment if needed: {track}")
         try:
-            adjusted_duration = track.get("adjustedDuration")
+            adjusted_duration = int(track.get("adjustedDuration"))
             metadata = track.get("metadata", {})
-            runtime = metadata.get("runtime")
+            runtime = int(metadata.get("runtime"))
+
             # If the track has an offset (by split or explicit start time), adjust playback.
             if adjusted_duration != runtime and (track.get("splitType") == "leftover" or metadata.get("start")):
-                offset = metadata.get("start") or (runtime - adjusted_duration)
+                offset = int(metadata.get("start")) or (runtime - adjusted_duration)
                 # Give mpv a brief moment to load the file.
                 time.sleep(0.5)
                 if offset > 10:
                     logger.info(f"Setting playback offset to {offset} seconds.")
+                    logger.info(f"Adjusted duration: {runtime - offset}, Runtime: {runtime}")
                     self.player.time = offset
                 else:
                     logger.info(f"Setting playback offset in else case to {runtime - 10} seconds.")
+                    logger.info(f"Adjusted duration in else case: {10}, Runtime: {runtime}")
                     self.player.time = runtime - 10
             else:
                 logger.info("No offset adjustment needed for this track.")
