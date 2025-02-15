@@ -48,7 +48,6 @@ class Player:
     def on_media_player_playing(self, event):
         """Callback when playback starts."""
         try:
-            logger.info("Playback started. The event is: %s" % event)
             track = self.playlist[self.current_track_index]
             self.play_track_at_offset(track)
 
@@ -100,6 +99,8 @@ class Player:
             # Start from the last track in the player queue
             start_index = self.media_list_length
             end_index = min(start_index + count, len(self.playlist))
+
+            logger.info(f"Preloading tracks from {start_index} to {end_index}...")
 
             for i in range(start_index, end_index):
                 if i >= len(self.playlist):
