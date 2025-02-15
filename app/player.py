@@ -43,6 +43,9 @@ class Player:
         and preload more tracks.
         """
         logger.info(f"Playlist position changed to: {value}")
+        if value == -1:
+            logger.info("No track is currently active.")
+            return
         self.current_track_index = value
         try:
             if value < self.playlist_length:
@@ -76,7 +79,7 @@ class Player:
             track_url = (f"{NORMALIZED_CDN}/{track.get('id')}"
                          if track.get("type") == "Track"
                          else track.get("url"))
-            logger.info(f"Adding track to queue, md5: {track_md5} for track {track_id}.")
+            # logger.info(f"Adding track to queue, md5: {track_md5} for track {track_id}.")
 
             # Download (or get cached) track file.
             track_path = self.download_track(track_url, track_id, track_md5)
@@ -121,7 +124,7 @@ class Player:
                 logger.info(f"Track {track_id} already cached.")
                 return track_path
 
-            logger.info(f"Downloading track {track_id} from {url}...")
+            # logger.info(f"Downloading track {track_id} from {url}...")
             response = requests.get(url, stream=True)
             response.raise_for_status()
 
@@ -155,7 +158,7 @@ class Player:
                     logger.info(f"Setting playback offset to {offset} seconds.")
                     self.player.time = offset
                 else:
-                    logger.info(f"Setting playback offset to {runtime - 10} seconds.")
+                    logger.info(f"Setting playback offset in else case to {runtime - 10} seconds.")
                     self.player.time = runtime - 10
             else:
                 logger.info("No offset adjustment needed for this track.")
