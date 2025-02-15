@@ -50,7 +50,7 @@ class Player:
             self.play_track_at_offset(track)
 
             # Preload the next 5 tracks
-            self.preload_next_tracks(5)
+            # self.preload_next_tracks(5)
         except Exception as e:
             logger.error(f"Error in on_media_player_playing media: {e}")
 
