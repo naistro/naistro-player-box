@@ -152,7 +152,7 @@ class Player:
                 offset = int(metadata.get("start") or (runtime - adjusted_duration))
                 logger.info(f"Calculated offset: {offset} seconds")
                 # Wait a bit to ensure the file is fully loaded.
-                time.sleep(1)
+                time.sleep(0.5)
 
                 # If offset is greater than 10, use it; otherwise, use runtime-10.
                 if offset > 10:
@@ -163,9 +163,6 @@ class Player:
                     logger.info(f"Offset ({offset} sec) too low; setting playback offset to {alt_offset} seconds instead.")
                     self.player.seek(alt_offset, reference='absolute')
 
-                # Optionally, log the current playback time after a short delay.
-                time.sleep(0.1)
-                logger.info(f"Current playback time after seek: {self.player.time}")
             else:
                 logger.info("No offset adjustment needed for this track.")
         except Exception as e:
