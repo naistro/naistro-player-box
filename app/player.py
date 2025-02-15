@@ -189,10 +189,10 @@ def start_player(playlist):
         player.add_track_to_queue(track)
     player.play()    
     
-    try:
-        while player.current_track_index < player.playlist_length:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        logger.info("Playback stopped by user.")
-    finally:
-        player.stop()
+    # try:
+    #     while player.current_track_index < player.playlist_length:
+    #         time.sleep(1)
+    # except KeyboardInterrupt:
+    #     logger.info("Playback stopped by user.")
+    # finally:
+    #     player.stop()
