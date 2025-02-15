@@ -139,11 +139,6 @@ class Player:
             return None
 
     def play_track_at_offset(self, track):
-        """
-        Check track metadata for any start offset adjustments and apply them.
-        This is similar to your VLC logic where, if the adjusted duration differs
-        from the full runtime (or if playing a 'leftover' split), we seek to the proper offset.
-        """
         logger.info(f"Playing track with offset adjustment if needed: {track}")
         try:
             adjusted_duration = int(track.get("adjustedDuration"))
@@ -152,21 +147,26 @@ class Player:
 
             # If the track has an offset (by split or explicit start time), adjust playback.
             if adjusted_duration != runtime and (track.get("splitType") == "leftover" or metadata.get("start")):
-                offset = int(metadata.get("start")) or (runtime - adjusted_duration)
-                # Give mpv a brief moment to load the file.
-                time.sleep(0.5)
+                offset = int(metadata.get("start") or (runtime - adjusted_duration))
+                logger.info(f"Calculated offset: {offset} seconds")
+                # Increase wait time to allow the file to load
+                time.sleep(1)  # Try increasing this delay if necessary
                 if offset > 10:
                     logger.info(f"Setting playback offset to {offset} seconds.")
-                    logger.info(f"Adjusted duration: {runtime - offset}, Runtime: {runtime}")
-                    self.player.time = 300
+                    self.player.time = offset
                 else:
-                    logger.info(f"Setting playback offset in else case to {runtime - 10} seconds.")
-                    logger.info(f"Adjusted duration in else case: {10}, Runtime: {runtime}")
-                    self.player.time = runtime - 10
+                    alt_offset = runtime - 10
+                    logger.info(f"Setting playback offset to {alt_offset} seconds.")
+                    self.player.time = alt_offset
+
+                # Log the current playback time shortly after setting the offset
+                time.sleep(0.1)
+                logger.info(f"Current playback time: {self.player.time}")
             else:
                 logger.info("No offset adjustment needed for this track.")
         except Exception as e:
             logger.error(f"Error in play_track_at_offset: {e}")
+
 
     def play(self):
         """
