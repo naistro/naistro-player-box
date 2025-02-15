@@ -1,7 +1,7 @@
 # app/player.py
 import os
 import requests
-import vlc
+import mpv
 import time
 import yaml
 import logging
@@ -16,120 +16,105 @@ PUBLISHED_CDN = config["api"]["published_cdn"]
 
 # Directory to store cached tracks
 CACHE_DIR = "cache/tracks"
-
-# Ensure cache directory exists
 os.makedirs(CACHE_DIR, exist_ok=True)
+
 
 class Player:
     def __init__(self):
-        self.instance = vlc.Instance()
-        self.media_list = self.instance.media_list_new()  # Create a MediaList
-        self.media_list_player = self.instance.media_list_player_new()  # Create a MediaListPlayer
-        self.media_list_player.set_media_list(self.media_list)  # Set the MediaList
+        # Create an mpv player instance with default input bindings.
+        self.player = mpv.MPV(input_default_bindings=True, input_vo_keyboard=True)
+        
+        # Register an observer for the playlist position.
+        # This callback is invoked whenever the current file changes.
+        self.player.observe_property('playlist-pos', self.on_playlist_pos_changed)
+        # Also attach an event callback for when a file finishes.
+        self.player.event_callback('end-file', self.on_end_file)
 
-        # Track the length of the MediaList manually
-        self.media_list_length = 0
+        # Tracking variables
+        self.current_track_index = 0      # Current playing index (0-based)
+        self.added_tracks_count = 0       # Number of tracks loaded into mpv's playlist
+        self.playlist = []                # Full list of track metadata (populated from start_player)
+        self.playlist_length = 0          # Total number of tracks
 
-        # Attach event listeners
-        self.event_manager = self.media_list_player.get_media_player().event_manager()
-        self.event_manager.event_attach(
-            vlc.EventType.MediaPlayerPlaying,
-            self.on_media_player_playing
-        )
-        self.event_manager.event_attach(
-            vlc.EventType.MediaPlayerEndReached,
-            self.on_media_player_end_reached
-        )
-        self.event_manager.event_attach(
-            vlc.EventType.MediaPlayerTimeChanged,
-            self.on_media_player_time_changed
-        )
-
-        self.current_track_index = 0
-        self.playlist_length = 0
-        self.playlist = []  # Store track metadata
-        self.seek_offset = None  # Track the offset to seek to
-
-    def on_media_player_time_changed(self, event):
-        """Callback when the media time changes."""
+    def on_playlist_pos_changed(self, name, value):
+        """
+        Called when the mpv property 'playlist-pos' changes.
+        When a new file starts, update the current index, apply any offset adjustments,
+        and preload more tracks.
+        """
+        logger.info(f"Playlist position changed to: {value}")
+        self.current_track_index = value
         try:
-            if self.seek_offset is not None:
-                # Seek to the specified offset
-                self.media_list_player.get_media_player().set_time(self.seek_offset)
-                logger.info(f"Seeked to {self.seek_offset} seconds.")
-                self.seek_offset = None  # Reset the offset
-        except Exception as e:
-            logger.error(f"Error in on_media_player_time_changed: {e}")
-
-    def on_media_player_playing(self, event):
-        """Callback when playback starts."""
-        try:
-            full_track_object = self.playlist[self.current_track_index]
-            self.play_track_at_offset(full_track_object.get("track"))
-
-            # Preload the next 5 tracks
-            self.preload_next_tracks(5)
-        except Exception as e:
-            logger.error(f"Error in on_media_player_playing media: {e}")
-
-    def on_media_player_end_reached(self, event):
-        """Callback when playback ends."""
-        try:
-            logger.info("Playback ended. The event is: %s" % event)
-            self.current_track_index += 1
-            if self.current_track_index < self.playlist_length:
-                logger.info(f"Advancing to next track: {self.current_track_index}")
-                logger.info(f"Should autonomously play track: {self.playlist[self.current_track_index]}")
+            if value < self.playlist_length:
+                # Get the track metadata for the current position.
+                track = self.playlist[value]
+                self.play_track_at_offset(track)
+                # Preload the next 5 tracks (if any)
+                self.preload_next_tracks(5)
             else:
                 logger.info("Playlist finished.")
         except Exception as e:
-            logger.error(f"Error in on_media_player_end_reached: {e}")
+            logger.error(f"Error in on_playlist_pos_changed: {e}")
+
+    def on_end_file(self, event):
+        """
+        Called when the current file has finished playing.
+        mpv automatically advances the playlist.
+        """
+        logger.info(f"End of file reached. Event: {event}")
 
     def add_track_to_queue(self, track):
-        """Add a track to the player queue."""
+        """
+        Download the track (if needed) and load it into mpv’s playlist.
+        The first track is loaded with mode 'replace' so it starts immediately;
+        subsequent tracks are appended.
+        """
         try:
             track_md5 = track.get("md5")
             track_id = track.get("id")
-            track_url = (f"{NORMALIZED_CDN}/{track.get('id')}" if track.get("type") == "Track"
-                        else track.get("url"))
-            logger.info(f"Add track to queue, md5, {track_md5} added to queue.")
+            # Determine the URL based on track type.
+            track_url = (f"{NORMALIZED_CDN}/{track.get('id')}"
+                         if track.get("type") == "Track"
+                         else track.get("url"))
+            logger.info(f"Adding track to queue, md5: {track_md5} for track {track_id}.")
 
+            # Download (or get cached) track file.
             track_path = self.download_track(track_url, track_id, track_md5)
-
             if track_path:
-                media = self.instance.media_new(track_path)
-                self.media_list.add_media(media)  # Add media to the MediaList
-                self.media_list_length += 1  # Update the MediaList length
-                self.playlist.append({"media": media, "track": track})  # Store track metadata
-                self.playlist_length += 1
+                mode = "replace" if self.added_tracks_count == 0 else "append"
+                # mpv.loadfile will add the file to its internal playlist.
+                self.player.loadfile(track_path, mode)
+                self.added_tracks_count += 1
                 logger.info(f"Track {track_id} added to queue.")
             else:
                 logger.error(f"Failed to add track {track_id} to queue.")
-
         except Exception as e:
             logger.error(f"Error adding track to queue: {e}")
 
     def preload_next_tracks(self, count):
+        """
+        Preload the next `count` tracks into the mpv playlist.
+        This method looks at the provided playlist and loads any tracks that
+        have not yet been added.
+        """
         logger.info(f"Preloading next {count} tracks...")
         try:
-            # Start from the last track in the player queue
-            start_index = self.media_list_length
+            start_index = self.added_tracks_count
             end_index = start_index + count
-
-            logger.info(f"Preloading tracks from {start_index} to {end_index}...")
-
+            logger.info(f"Preloading tracks from index {start_index} to {end_index}...")
             for i in range(start_index, end_index):
-                if i >= len(self.playlist):
-                    break  # No more tracks to preload
-
+                if i >= self.playlist_length:
+                    break  # No more tracks available.
                 track = self.playlist[i]
                 self.add_track_to_queue(track)
-
         except Exception as e:
-            logger.error(f"Error preloading next tracks: {e}")            
+            logger.error(f"Error preloading next tracks: {e}")
 
     def download_track(self, url, track_id, track_md5):
-        """Download a track and save it to the cache directory."""
+        """
+        Download a track from `url` and save it under the cache directory.
+        If the track is already cached, return the cached file path.
+        """
         try:
             track_path = os.path.join(CACHE_DIR, track_md5)
             if os.path.exists(track_path):
@@ -146,70 +131,97 @@ class Player:
 
             logger.info(f"Track {track_id} downloaded and cached.")
             return track_path
-
         except Exception as e:
             logger.error(f"Failed to download track {track_id}: {e}")
             return None
 
     def play_track_at_offset(self, track):
-        logger.info(f"Playing track at offset: {track}")
+        """
+        Check track metadata for any start offset adjustments and apply them.
+        This is similar to your VLC logic where, if the adjusted duration differs
+        from the full runtime (or if playing a 'leftover' split), we seek to the proper offset.
+        """
+        logger.info(f"Playing track with offset adjustment if needed: {track}")
         try:
-            if (track.get("adjustedDuration") != track.get("metadata", {}).get("runtime") and
-            (track.get("splitType") == "leftover" or track.get("metadata", {}).get("start"))):
-                logger.info(f"Playing track from offset: {track.get('metadata', {}).get('start')} seconds.")
-                offset = track.get("metadata", {}).get("start") or (
-                    track.get("metadata", {}).get("runtime") - track.get("adjustedDuration")
-                )
+            adjusted_duration = track.get("adjustedDuration")
+            metadata = track.get("metadata", {})
+            runtime = metadata.get("runtime")
+            # If the track has an offset (by split or explicit start time), adjust playback.
+            if adjusted_duration != runtime and (track.get("splitType") == "leftover" or metadata.get("start")):
+                offset = metadata.get("start") or (runtime - adjusted_duration)
+                # Give mpv a brief moment to load the file.
                 time.sleep(0.5)
                 if offset > 10:
-                    self.seek_offset = int(offset * 1000)
+                    logger.info(f"Setting playback offset to {offset} seconds.")
+                    self.player.time = offset
                 else:
-                    self.seek_offset = (int(track.get("metadata", {}).get("runtime")) - 10) * 1000
-                    logger.info(f"Playing track from offset else: {self.seek_offset} seconds.")
+                    logger.info(f"Setting playback offset to {runtime - 10} seconds.")
+                    self.player.time = runtime - 10
             else:
-                logger.info(f"Playing track without offset, track object: {track}")
+                logger.info("No offset adjustment needed for this track.")
         except Exception as e:
-            logger.error(f"Error playing track at offset: {e}")
+            logger.error(f"Error in play_track_at_offset: {e}")
 
     def play(self):
-        """Start playing the playlist."""
+        """
+        Start playback.
+        (mpv will start playing as soon as the first file is loaded;
+        here we make sure that playback is not paused.)
+        """
         try:
-            if not self.playlist:
+            if self.playlist_length == 0:
                 logger.error("No tracks in the playlist.")
                 return
 
             logger.info("Starting playback...")
-            self.media_list_player.play()  # Start playing the MediaList
+            self.player.pause = False  # Ensure the player is not paused.
         except Exception as e:
             logger.error(f"Error starting playback: {e}")
 
     def stop(self):
-        """Stop playback."""
-        self.media_list_player.stop()
-        logger.info("Playback stopped.")
+        """Stop playback by quitting mpv."""
+        try:
+            self.player.quit()
+            logger.info("Playback stopped.")
+        except Exception as e:
+            logger.error(f"Error stopping playback: {e}")
 
     def seek(self, offset):
-        """Seek to a specific position in the current track."""
-        self.media_list_player.get_media_player().set_time(int(offset * 1000))  # Convert seconds to milliseconds
-        logger.info(f"Seeked to {offset} seconds.")
+        """Seek to a specific position (in seconds) in the current track."""
+        try:
+            self.player.seek(offset, reference='absolute')
+            logger.info(f"Seeked to {offset} seconds.")
+        except Exception as e:
+            logger.error(f"Error seeking: {e}")
 
     def skip_to_next(self):
         """Skip to the next track in the playlist."""
-        self.current_track_index += 1
-        if self.current_track_index < self.playlist_length:
-            self.media_list_player.play_item_at_index(self.current_track_index)
+        try:
+            self.player.command("playlist-next")
             logger.info("Skipped to next track.")
-        else:
-            logger.info("No more tracks to skip.")
+        except Exception as e:
+            logger.error(f"Error skipping to next track: {e}")
+
 
 def start_player(playlist):
-    """Start playing the playlist."""
+    """
+    Initialize the player, load the initial set of tracks, and start playback.
+    The full playlist (a list of track metadata dictionaries) is stored in the player,
+    and the first 10 tracks are immediately added to mpv's playlist.
+    """
     player = Player()
-    for track in playlist[:10]:  # Load first 10 tracks
+    # Store the complete playlist and its length.
+    player.playlist = playlist
+    player.playlist_length = len(playlist)
+
+    # Load the first 10 tracks into mpv.
+    for track in playlist[:10]:
         player.add_track_to_queue(track)
-    player.play()    
-    
+
+    player.play()
+
     try:
+        # Keep the program alive as long as there are tracks playing.
         while player.current_track_index < player.playlist_length:
             time.sleep(1)
     except KeyboardInterrupt:
