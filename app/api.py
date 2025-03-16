@@ -65,6 +65,43 @@ def fetch_locations():
         logger.error(f"Failed to fetch locations: {e}")
         return None
 
+
+# fetch full location data
+# https://api-prod.naistro.com/players/locations/41ee9eea-5c78-41fe-a608-1f60da0654b5?isPlaylists=true&test=false&prayerDurationInMilliseconds=30000&silenceDurationInMilliseconds=30000
+
+def fetch_location(location_id):
+    headers = get_headers()
+    if not headers:
+        return None
+
+    location_url = f"{LOCATIONS_URL}/{location_id}"
+    
+    params = {
+        "isPlaylists": "true",
+        "test": "false",
+        "prayerDurationInMilliseconds": 30000,
+        "silenceDurationInMilliseconds": 30000
+    }
+
+    try:
+        response = requests.get(location_url, headers=headers, params=params)
+        response.raise_for_status()
+        data = response.json()
+
+        if "payload" in data:
+            return data["payload"]
+        else:
+            logger.error("Invalid location API response format")
+            return None
+
+    except requests.exceptions.HTTPError as e:
+        logger.error(f"HTTP Error: {e}")
+        logger.error(f"Response Body: {e.response.text}")
+        return None
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Failed to fetch location: {e}")
+        return None
+
 def fetch_playlist(location_id):
     """Fetch playlist for a given location"""
     headers = get_headers()
@@ -72,7 +109,7 @@ def fetch_playlist(location_id):
         return None
 
     # Construct the URL with the location_id dynamically
-    playlist_url = f"{LOCATIONS_URL}/{location_id}/new-playlist"
+    playlist_url = f"{LOCATIONS_URL}/{location_id}/playlist"
     
     # Add query parameters
     params = {
@@ -93,7 +130,7 @@ def fetch_playlist(location_id):
 
         payload = data["payload"]
         if "events" in payload:
-            return payload["events"]
+            return payload
         else:
             logger.error("Invalid playlist API response format")
             return None
