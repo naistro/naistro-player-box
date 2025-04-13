@@ -4,6 +4,7 @@ api:
   normalized_cdn: "https://cdn-gate-dev.naistro.com/audio/normalized"
   published_cdn: "https://cdn-gate-dev.naistro.com/audio/published"
   sqs_url: "https://sqs.eu-west-1.amazonaws.com/528527461191/player-box-message-dev"
+  websocket_url: "wss://websocketv2-dev.naistro.com"
 headers:
   public_api_key: "o4PBtizoSs1meRjfgXohv9H0nMowRuTA4CNraECW"
   content_type: "application/json"

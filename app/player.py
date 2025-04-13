@@ -8,6 +8,7 @@ import yaml
 import logging
 from app.interruption_manager import InterruptionManager
 from app.volume_controller import VolumeController
+from app.interruption_storage import InterruptionStorage
 
 logger = logging.getLogger("naistro-player")
 
@@ -213,6 +214,21 @@ class Player:
         except Exception as e:
             logger.error(f"Error starting playback: {e}")
     
+    def play_pause(self):
+        """Toggle play/pause state"""
+        try:
+            # Check if the player is currently playing
+            if hasattr(self.main_player, 'pause') and not self.main_player.pause:
+                # Player is playing, pause it
+                self.main_player.pause = True
+                logger.info("Playback paused")
+            else:
+                # Player is paused, resume playback
+                self.main_player.pause = False
+                logger.info("Playback resumed")
+        except Exception as e:
+            logger.error(f"Error toggling play/pause: {e}")
+    
     def stop(self):
         """Stop both players."""
         try:
@@ -314,6 +330,14 @@ class Player:
                 location_id = location.get("guid")
                 playlistData = fetch_playlist(location_id)
                 locationData = fetch_location(location_id)
+
+                # Download and cache interruption files
+                storage = InterruptionStorage()
+                if not storage.load_interruption_files(locationData):
+                    logger.error("Failed to load interruption files. Exiting...")
+                    return
+                
+                logger.info("Interruption files loaded successfully.")
                 
                 # Validate playlist data
                 if not playlistData.get("events"):
