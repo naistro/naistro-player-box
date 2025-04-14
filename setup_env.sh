@@ -48,7 +48,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
         echo "libmpv.dylib not found, please ensure mpv is installed correctly."
     fi
 
-elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+elif [[ "$OSTYPE" == *"linux"* ]]; then
     # Linux
     if ! command -v mpv &> /dev/null; then
         echo "Installing mpv on Linux..."

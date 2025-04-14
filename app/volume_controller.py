@@ -54,6 +54,10 @@ class VolumeController:
             self.interruption_player.loadfile(audio_file, "replace")
             logger.info(f"Started playing interruption: {audio_file}")
 
+            # Make sure the main player is muted if for some reason it didn't fade out
+            if self.main_player:
+                self.main_player.volume = 0            
+
             # Wait for the file to load and initialize
             time.sleep(1)  # Add a short delay to allow file initialization
 

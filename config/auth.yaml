@@ -7,8 +7,5 @@ aws_cognito:
 credentials:
   username: "naistro"
   password: "test123ABC!"
-aws:
-  access_key_id: "AKIAXWDVRBNDUPHKEDGB"
-  secret_access_key: "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"
 headers:
   content_type: "application/x-amz-json-1.1"
