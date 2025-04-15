@@ -2,6 +2,6 @@
 
 
 ### Setup project and run
--- chmod +x setup_env.sh
--- ./setup_env.sh
+-- chmod +x setup.sh
+-- ./setup.sh
 -- python main.py
