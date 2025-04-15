@@ -41,10 +41,22 @@ class Player:
         self.location_offset = 0
         self.location_data = None
         self.volume = 100  # Default volume
+        
+        # WebSocket client and log service will be set later
+        self.websocket_client = None
+        self.log_service = None
                 
         # Initialize interruption manager with both players
         self.volume_controller = VolumeController(self.interruption_player, self.main_player)
         self.interruption_manager = InterruptionManager(self.interruption_player, self.volume_controller)
+
+    def set_websocket_client(self, websocket_client):
+        """Set the WebSocket client for this player instance"""
+        self.websocket_client = websocket_client
+        if hasattr(websocket_client, 'log_service'):
+            self.log_service = websocket_client.log_service
+            # Initialize with idle state
+            self.log_service.set_player_state("idle")
 
     def on_playlist_pos_changed(self, name, value):
         """
@@ -195,10 +207,19 @@ class Player:
     def set_volume(self, volume):
         """Set volume for main player"""
         try:
-            volume = max(0, min(100, volume))
-            self.volume = volume
-            self.main_player.volume = volume
-            logger.debug(f"Main player volume set to {volume}")
+            self.volume = max(0, min(volume, 100))
+            if self.main_player:
+                self.main_player.volume = self.volume
+                logger.info(f"Volume set to {self.volume}")
+                
+                # Update player state to muted if volume is 0
+                if self.log_service:
+                    if self.volume == 0:
+                        self.log_service.set_player_state("muted")
+                    elif self.main_player.pause:
+                        self.log_service.set_player_state("stopped")
+                    else:
+                        self.log_service.set_player_state("playing")
         except Exception as e:
             logger.error(f"Error setting volume: {e}")
 
@@ -211,6 +232,10 @@ class Player:
             logger.info("Starting playback...")
             self.main_player.pause = False  # Use main_player
             self.main_player.volume = self.volume
+            
+            # Update player state
+            if self.log_service:
+                self.log_service.set_player_state("playing")
         except Exception as e:
             logger.error(f"Error starting playback: {e}")
     
@@ -222,10 +247,18 @@ class Player:
                 # Player is playing, pause it
                 self.main_player.pause = True
                 logger.info("Playback paused")
+                
+                # Update player state
+                if self.log_service:
+                    self.log_service.set_player_state("stopped")
             else:
                 # Player is paused, resume playback
                 self.main_player.pause = False
                 logger.info("Playback resumed")
+                
+                # Update player state
+                if self.log_service:
+                    self.log_service.set_player_state("playing")
         except Exception as e:
             logger.error(f"Error toggling play/pause: {e}")
     
@@ -250,6 +283,10 @@ class Player:
                         pass
 
                 logger.info("Player stopped. Returning to idle state.")
+                
+                # Update player state
+                if self.log_service:
+                    self.log_service.set_player_state("idle")
                 
                 # Reset state variables
                 self.current_track_index = 0

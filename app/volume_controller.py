@@ -14,6 +14,7 @@ class VolumeController:
         self.completion_callback = None
         self.target_volume = 0
         self.main_player_original_volume = 100  # Store the original volume of the main player
+        self.log_service = None  # Will be set when player connects to websocket
 
     def set_main_player(self, main_player):
         """Set the main player instance"""
@@ -23,6 +24,10 @@ class VolumeController:
         # Store the original volume of the main player
         if self.main_player:
             self.main_player_original_volume = self.main_player.volume
+
+    def set_log_service(self, log_service):
+        """Set the log service for state updates"""
+        self.log_service = log_service
 
     def play_interruption(self, audio_file, location_volume, completion_callback=None):
         """Play interruption with simple fade-out and fade-in"""
@@ -56,7 +61,9 @@ class VolumeController:
 
             # Make sure the main player is muted if for some reason it didn't fade out
             if self.main_player:
-                self.main_player.volume = 0            
+                self.main_player.volume = 0
+                if self.log_service:
+                    self.log_service.set_player_state("muted")
 
             # Wait for the file to load and initialize
             time.sleep(1)  # Add a short delay to allow file initialization
@@ -111,6 +118,10 @@ class VolumeController:
             def do_fade(current_step=0):
                 if current_step > steps:
                     # Fade completed
+                    # If volume is 0, update player state to muted
+                    if self.main_player and self.main_player.volume == 0 and self.log_service:
+                        self.log_service.set_player_state("muted")
+                        
                     if callback:
                         try:
                             logger.info("Fade completed. Executing callback...")
@@ -128,6 +139,10 @@ class VolumeController:
                     if self.main_player:
                         self.main_player.volume = current_volume
                         logger.debug(f"Fade step {current_step}/{steps}: main_player volume={current_volume:.1f}")
+                        
+                        # If this is the last step and volume is 0, update player state
+                        if current_step == steps and current_volume == 0 and self.log_service:
+                            self.log_service.set_player_state("muted")
 
                     # Schedule next step
                     self.fade_timer = Timer(step_time, lambda: do_fade(current_step + 1))

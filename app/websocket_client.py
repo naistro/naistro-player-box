@@ -47,6 +47,10 @@ class WebSocketClient:
         # Initialize LogService
         self.log_service = LogService(self)
         
+        # Connect player to log service
+        if self.player:
+            self.player.set_websocket_client(self)
+        
         # Player control commands mapping
         self.control_actions = {
             "start-play": self._handle_start_play,
